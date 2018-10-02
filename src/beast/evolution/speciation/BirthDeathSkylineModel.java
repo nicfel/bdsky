@@ -5,6 +5,7 @@ import beast.core.BEASTInterface;
 import beast.core.Citation;
 import beast.core.Description;
 import beast.core.Input;
+import beast.core.Loggable;
 import beast.core.MCMC;
 import beast.core.Operator;
 import beast.core.StateNode;
@@ -106,8 +107,13 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
     public Input<Boolean> contemp =
             new Input<Boolean>("contemp", "Only contemporaneous sampling (i.e. all tips are from same sampling time, default false)", false);
 
-    public Input<RealParameter> reproductiveNumberInput =
-            new Input<RealParameter>("reproductiveNumber", "The basic / effective reproduction number");
+    public Input<RealParameter> logReproductiveNumberInput =
+            new Input<RealParameter>("logReproductiveNumber", "The basic / effective reproduction number");
+    public Input<RealParameter> absoluteReproductiveNumberInput =
+            new Input<RealParameter>("absoluteReproductiveNumber", "The basic / effective reproduction number");
+
+    
+    
     public Input<RealParameter> becomeUninfectiousRate =
             new Input<RealParameter>("becomeUninfectiousRate", "Rate at which individuals become uninfectious (through recovery or sampling)");
     public Input<RealParameter> samplingProportion =
@@ -254,7 +260,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
             psi = samplingRate.get().getValues();
             if (SAModel) r = removalProbability.get().getValues();
 
-        } else if (reproductiveNumberInput.get() != null && becomeUninfectiousRate.get() != null && samplingProportion.get() != null) {
+        } else if (logReproductiveNumberInput.get() != null && becomeUninfectiousRate.get() != null && samplingProportion.get() != null) {
 
             transform = true;
 
@@ -270,7 +276,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
 
         if (transform) {
 
-            if (birthChanges < 1) birthChanges = reproductiveNumberInput.get().getDimension() - 1;
+            if (birthChanges < 1) birthChanges = logReproductiveNumberInput.get().getDimension() - 1;
             samplingChanges = samplingProportion.get().getDimension() - 1;
             deathChanges = becomeUninfectiousRate.get().getDimension() - 1;
 
@@ -598,6 +604,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
         }
 
         if (printTempResults) System.out.println("times = " + timesSet);
+        
 
         times = timesSet.toArray(new Double[timesSet.size()]);
         totalIntervals = times.length;
@@ -734,7 +741,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
                 psi[totalIntervals - 1],
                 rho[totalIntervals - 1],
                 Ai[totalIntervals - 1], 1.);  //  (p0[m-1] = 1)
-
+        
         if (conditionOn == ConditionOn.RHO_SAMPLING) {
             Bihat[totalIntervals - 1] = Bi(
                     birth[totalIntervals - 1],
@@ -784,7 +791,6 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
     }
 
     public double Bi(double b, double g, double psi, double rho, double A, double p0) {
-
         return ((1 - 2 * p0 * (1 - rho)) * b + g + psi) / A;
     }
 
@@ -907,12 +913,17 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
 
     protected void transformParameters() {
 
-        Double[] R = reproductiveNumberInput.get().getValues(); // if SAModel: reproductiveNumber = lambda/delta
+        Double[] logR = logReproductiveNumberInput.get().getValues(); // if SAModel: reproductiveNumber = lambda/delta
         Double[] b = becomeUninfectiousRate.get().getValues(); // delta = mu + psi*r
         Double[] p = samplingProportion.get().getValues(); // if SAModel: s = psi/(mu+psi)
         Double[] removalProbabilities = new Double[1];
         if (SAModel) removalProbabilities = removalProbability.get().getValues();
 
+        Double[] R = new Double[logR.length];
+        // transform to normal space
+        for (int i = 0 ; i < R.length; i++)
+        	R[i] = absoluteReproductiveNumberInput.get().getValue()*Math.exp(logR[i]);
+        
         birth = new Double[totalIntervals];
         death = new Double[totalIntervals];
         psi = new Double[totalIntervals];
@@ -979,6 +990,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
 
     @Override
     public double calculateTreeLogLikelihood(TreeInterface tree) {
+    	
 
         logP = 0.;
 
@@ -992,6 +1004,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
         int[] n = new int[totalIntervals];
 
         int index = 0;
+
         if (times[index] < 0.)
             index = index(0.);
 
@@ -1009,7 +1022,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
                 if (conditionOnRootInput.get()) {
                     temp = log_q(index, times[index], x0) - 2 * Math.log(1 - temp) - Math.log(birth[index]);
                 } else {
-                    temp = log_q(index, times[index], x0) - Math.log(1 - temp);
+                    temp = log_q(index, times[index], x0) - Math.log(1 - temp);                    
                 }
                 break;
             case RHO_SAMPLING:
@@ -1025,8 +1038,14 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
             default:
                 break;
         }
-
+        
+        
+//        System.out.println(temp);
+//        System.out.println(Arrays.toString(Bi));
+//        System.out.println(Arrays.toString(Ai));
+//        System.exit(0);
         logP = temp;
+//        return logP;
         if (Double.isInfinite(logP))
             return logP;
 
@@ -1068,6 +1087,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
             if (!isRhoTip[i] || m_rho.get() == null) {
                 double y = times[totalIntervals - 1] - tree.getNode(i).getHeight();
                 index = index(y);
+                
 
                 if (!(tree.getNode(i)).isDirectAncestor()) {
                     if (!SAModel) {
@@ -1075,12 +1095,16 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
                     } else {
                         temp = Math.log(psi[index] * (r[index] + (1 - r[index]) * p0(index, times[index], y))) - log_q(index, times[index], y);
                     }
+//                    System.out.println("flgkdjklgds");
                     logP += temp;
+//                    System.out.println(temp);
                     if (printTempResults) System.out.println("2nd PI = " + temp);
                     if (psi[index] == 0 || Double.isInfinite(logP))
                         return logP;
                 } else {
                     if (r[index] != 1) {
+//                        System.out.println("flgkdjklgds");
+
                         logP += Math.log((1 - r[index])*psi[index]);
                         if (Double.isInfinite(logP)) {
                             return logP;
@@ -1093,21 +1117,38 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
                 }
             }
         }
+//        System.exit(0);
 
         // last product term in f[T], factorizing from 1 to m //
         double time;
-        for (int j = 0; j < totalIntervals; j++) {
-            time = j < 1 ? 0 : times[j - 1];
+        
+       
+        for (int j = 1; j < totalIntervals; j++) {
+            time = times[j - 1];
             int[] k = {0};
             if (!SAModel) {
-                n[j] = ((j == 0) ? 0 : lineageCountAtTime(times[totalIntervals - 1] - time, tree));
+//                n[j] = ((j == 0) ? 0 : lineageCountAtTime(times[totalIntervals - 1] - time, tree));
+
+            	// set the number of lineages to 0 if start and end point of interval is below 0
+            	if (time < 0.0){
+            		// origin lies in that interval
+//            		if (times[j]>0.0){
+//            			time=0.0;
+//            			n[j]=1;
+            		// no origin reached yet
+//            		}else{
+            			n[j]=0;
+//            		}            		
+            	}else{
+            		n[j] = lineageCountAtTime(times[totalIntervals - 1] - time, tree);
+            	}
             } else {
                 n[j] = ((j == 0) ? 0 : lineageCountAtTime(times[totalIntervals - 1] - time, tree, k));
             }
             if (n[j] > 0) {
-                temp = n[j] * (log_q(j, times[j], time) + Math.log(1 - rho[j-1]));
-                logP += temp;
-                if (printTempResults)
+            	// only start counting probability mass after the origin was reached
+            	logP += n[j] * (log_q(j, times[j], time) + Math.log(1 - rho[j-1]));
+            	if (printTempResults)
                     System.out.println("3rd factor (nj loop) = " + temp + "; interval = " + j + "; n[j] = " + n[j]);//+ "; Math.log(g(j, times[j], time)) = " + Math.log(g(j, times[j], time)));
                 if (Double.isInfinite(logP))
                     return logP;
@@ -1132,6 +1173,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
 
             }
         }
+        
 
         if (SAModel) {
             int internalNodeCount = tree.getLeafNodeCount() - ((Tree)tree).getDirectAncestorNodeCount()- 1;

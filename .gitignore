@@ -1,1 +1,5 @@
 /bdsky.iml
+/bin/
+.classpath
+.project
+.DS_Store
