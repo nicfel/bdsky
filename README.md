@@ -1,6 +1,8 @@
-# bdsky - Birth Death Serial Skyline Model for BEAST2
+## bdsky - Birth Death Serial Skyline Model for BEAST2, adapted for Flu Basel Project
 
-<!--[![Build Status](https://travis-ci.org/BEAST2-Dev/bdsky.svg?branch=master)](https://travis-ci.org/BEAST2-Dev/bdsky)-->
+This repo contains and adapted version of the original [BDSKY code](https://github.com/BEAST2-Dev/bdsky). It has some changes to allow it to better handle absolute time changes. It further implements a skygrid style smooting prior and some primitiv operators to explore R0's. Also, it allows to parameterize the R0's in log space (to work with the normal smooting prior).
+
+
 
 ## Citation
 
