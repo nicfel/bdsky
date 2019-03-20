@@ -107,17 +107,17 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
     public Input<Boolean> contemp =
             new Input<Boolean>("contemp", "Only contemporaneous sampling (i.e. all tips are from same sampling time, default false)", false);
 
-    public Input<RealParameter> logReproductiveNumberInput =
-            new Input<RealParameter>("logReproductiveNumber", "The basic / effective reproduction number");
+    public Input<TruncatedRealParameter> logReproductiveNumberInput =
+            new Input<TruncatedRealParameter>("logReproductiveNumber", "The basic / effective reproduction number");
     public Input<RealParameter> absoluteReproductiveNumberInput =
             new Input<RealParameter>("absoluteReproductiveNumber", "The basic / effective reproduction number");
 
     
     
-    public Input<RealParameter> becomeUninfectiousRate =
-            new Input<RealParameter>("becomeUninfectiousRate", "Rate at which individuals become uninfectious (through recovery or sampling)");
-    public Input<RealParameter> samplingProportion =
-            new Input<RealParameter>("samplingProportion", "The samplingProportion = samplingRate / becomeUninfectiousRate");
+    public Input<TruncatedRealParameter> becomeUninfectiousRate =
+            new Input<TruncatedRealParameter>("becomeUninfectiousRate", "Rate at which individuals become uninfectious (through recovery or sampling)");
+    public Input<TruncatedRealParameter> samplingProportion =
+            new Input<TruncatedRealParameter>("samplingProportion", "The samplingProportion = samplingRate / becomeUninfectiousRate");
 
     public Input<RealParameter> netDiversification = new Input<RealParameter>("netDiversification", "The net diversification rate");
     public Input<RealParameter> turnOver = new Input<RealParameter>("turnOver", "The turn over rate");
@@ -913,9 +913,9 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
 
     protected void transformParameters() {
 
-        Double[] logR = logReproductiveNumberInput.get().getValues(); // if SAModel: reproductiveNumber = lambda/delta
-        Double[] b = becomeUninfectiousRate.get().getValues(); // delta = mu + psi*r
-        Double[] p = samplingProportion.get().getValues(); // if SAModel: s = psi/(mu+psi)
+        Double[] logR = logReproductiveNumberInput.get().getTruncatedValues(); // if SAModel: reproductiveNumber = lambda/delta
+        Double[] b = becomeUninfectiousRate.get().getTruncatedValues(); // delta = mu + psi*r
+        Double[] p = samplingProportion.get().getTruncatedValues(); // if SAModel: s = psi/(mu+psi)
         Double[] removalProbabilities = new Double[1];
         if (SAModel) removalProbabilities = removalProbability.get().getValues();
 
@@ -959,7 +959,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
            SAModel: 0 <= r < 1;  No SA: r = 1
            Relation to transform: nd = (R0 - 1) * delta, to = 1/R0, sp = s  */
         Double[] to = turnOver.get().getValues();
-        Double[] sp = samplingProportion.get().getValues();
+        Double[] sp = samplingProportion.get().getTruncatedValues();
 
         if (netDiversification.get() != null) {  // netdiversification-turnover-samplingproportion parametrization
             Double[] nd = netDiversification.get().getValues();

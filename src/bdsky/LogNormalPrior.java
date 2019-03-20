@@ -41,7 +41,17 @@ public class LogNormalPrior extends Distribution {
         double const_fact = Math.log(sigma*Math.pow(2*Math.PI, 0.5));
         
         ParametricDistribution x0Prior = x0PriorInput.get();
-		logP = Math.log(x0Prior.density(x[0]));
+        logP = 0.0;
+        // calculate the mean value
+        double[] x_mean = new double[1];
+        x_mean[0] = 0;
+//        for (int i = 0; i < x.length; i++)
+//        	logP += Math.log(x0Prior.density(x[i]));
+        
+               
+		logP = Math.log(x0Prior.density(x[x.length-1]));
+//		logP += Math.log(x0Prior.density(x[50]));
+		logP += Math.log(x0Prior.density(x[0]));
 		
 		
         for (int i = 1; i < x.length; i++) {
