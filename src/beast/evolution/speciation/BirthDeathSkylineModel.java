@@ -484,7 +484,8 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
         } else {
 
             if ((!isBDSIR()) && numChanges > 0 && intervalTimes.getDimension() != numChanges + 1) {
-                throw new RuntimeException("The time interval parameter should be numChanges + 1 long (" + (numChanges + 1) + ").");
+                throw new RuntimeException("The time interval parameter should be numChanges + 1 long (" + (numChanges + 1) + ")." +
+                		", but currently is of length " + intervalTimes.getDimension());
             }
 
             int dim = intervalTimes.getDimension();
@@ -991,7 +992,7 @@ public class BirthDeathSkylineModel extends SpeciesTreeDistribution {
     @Override
     public double calculateTreeLogLikelihood(TreeInterface tree) {
     	
-
+    	
         logP = 0.;
 
         int nTips = tree.getLeafNodeCount();
